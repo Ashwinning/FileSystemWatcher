@@ -84,9 +84,8 @@ namespace FileChangeNotifier
                 m_Sb.Append("    ");
                 m_Sb.Append(DateTime.Now.ToString());
                 m_bDirty = true;
+
                 CopyFilesToLocalMachine();
-
-
             }
         }
 
@@ -99,11 +98,14 @@ namespace FileChangeNotifier
         void CopyFilesToLocalMachine()
         {
             System.Threading.Thread.Sleep(5000);
-            CopyFolder(directoryPath, targetPath.Text + "\\", true);            
+            copyTimer = new System.Timers.Timer();
+            CopyFolder(directoryPath, targetPath.Text + "\\", true);
+           
         }
 
+        System.Timers.Timer copyTimer;
 
-        static public void CopyFolder(string sourceFolder, string destFolder, bool overwrite)
+        public void CopyFolder(string sourceFolder, string destFolder, bool overwrite)
         {
             if (!Directory.Exists(destFolder))
                 Directory.CreateDirectory(destFolder);
@@ -120,6 +122,40 @@ namespace FileChangeNotifier
                 string name = Path.GetFileName(folder);
                 string dest = Path.Combine(destFolder, name);
                 CopyFolder(folder, dest, overwrite);
+            }
+            CopyingStatus();
+        }
+
+        /// <summary>
+        /// Called by CopyFolder
+        /// Waits for 1 second to check if the copying finished
+        /// resets itself if called again
+        /// calls CopyingFinished() if 1 sec expires.
+        /// </summary>
+        void CopyingStatus()
+        {
+            copyTimer.Enabled = false;
+            copyTimer.Interval = 1000;
+            //copyTimer.Elapsed += new System.Timers.ElapsedEventHandler(CopyingFinished);
+            copyTimer.Elapsed += (sender, e) => CopyingFinished(sender, e);
+            copyTimer.Enabled = true;
+        }
+
+        /// <summary>
+        /// Finds exe file in the root.
+        /// If exe is found, runs the file
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="e"></param>
+        void CopyingFinished(object source, System.Timers.ElapsedEventArgs e)
+        {
+            string executable;
+            if (Directory.GetFiles(targetPath.Text,"*.exe") != null)
+            {
+                executable = Directory.GetFiles(targetPath.Text, "*.exe")[0];
+                MessageBox.Show("Opening " + executable);
+
+                System.Diagnostics.Process.Start(executable);
             }
         }
 
